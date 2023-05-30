@@ -11,9 +11,12 @@
     "format": "prettier --write src/",
     "build-only": "sam build",
     "deploy-dev": "sam build && sam deploy --config-env dev",
-    "deploy-staging": "sam build && sam deploy --config-env staging"
+    "deploy-staging": "sam build && sam deploy --config-env staging",
+    "generate": "graphql-codegen"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^4.0.0",
+    "@graphql-codegen/typescript": "^4.0.0",
     "@tsconfig/node18": "^1.0.1",
     "@types/aws-lambda": "^8.10.114",
     "@types/node": "^18.15.11",
@@ -23,5 +26,8 @@
     "eslint-config-prettier": "^8.8.0",
     "prettier": "^2.8.8",
     "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "graphql": "^16.6.0"
   }
 }

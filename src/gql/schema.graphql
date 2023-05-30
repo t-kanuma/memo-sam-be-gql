@@ -1,0 +1,37 @@
+﻿schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Memo {
+  archived: Boolean!
+  done: Boolean!
+  favorite: Boolean!
+  id: String!
+  text: String!
+  title: String!
+}
+
+type Mutation {
+  createMemo(memo: CreateMemoInput!): String
+  deleteMemo(id: String!): String
+  updateMemo(memo: UpdateMemoInput!): String
+}
+
+type Query {
+  memos(isArchived: Boolean): [Memo!]!
+}
+
+input CreateMemoInput {
+  text: String!
+  title: String!
+}
+
+input UpdateMemoInput {
+  archived: Boolean!
+  done: Boolean!
+  favorite: Boolean!
+  id: String!
+  text: String!
+  title: String!
+}

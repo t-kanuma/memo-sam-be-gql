@@ -5,65 +5,26 @@ import {
   UpdateCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { AppSyncResolverHandler } from "aws-lambda";
 import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  APIGatewayProxyEventPathParameters,
-} from "aws-lambda";
+  MutationUpdateMemoArgs,
+  UpdateMemoInput,
+} from "../../gql/generated/appsync";
+import { getUserId } from "../../commons";
 
 const docClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })
 );
 
-type Memo = {
-  id: string;
-  userId: string;
-  archived: boolean;
-  done: boolean;
-  favorite: boolean;
-  title: string;
-  text: string;
-};
+export const lambdaHandler: AppSyncResolverHandler<
+  MutationUpdateMemoArgs,
+  string
+> = async (event) => {
+  const userId = getUserId(event);
+  const memoToUpdate = event.arguments.memo;
+  isValidMemo(memoToUpdate);
 
-export const lambdaHandler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  const pathParams: APIGatewayProxyEventPathParameters | null =
-    event.pathParameters;
-
-  // validate path params
-  if (!pathParams) {
-    return createResponse(400, "path parames are null or empty.");
-  }
-
-  const { id } = pathParams;
-  console.log(`Memo Id: ${id}`);
-  if (!id) {
-    return createResponse(400, "Memo Id is undefined or empty.");
-  }
-
-  // validate payload
-  if (!event.body) {
-    return createResponse(400, "payload is null or empty.");
-  }
-
-  const payload = JSON.parse(event.body);
-  console.log(`payload: ${JSON.stringify(payload)}`);
-
-  if (!isMemoType({ ...payload })) {
-    return createResponse(400, "payload is not Memo type.");
-  }
-
-  if (!isValidMemo({ ...payload })) {
-    return createResponse(400, "payload is not valid.");
-  }
-
-  const userId = event.requestContext.authorizer?.claims["cognito:username"];
-  if (!userId) {
-    throw new Error("No userName Found");
-  }
-
-  const { title, text, archived, done, favorite } = payload;
+  const { id, title, text, archived, done, favorite } = memoToUpdate;
   const params: UpdateCommandInput = {
     TableName: process.env.TABLE_NAME,
     Key: {
@@ -89,7 +50,7 @@ export const lambdaHandler = async (
     );
     console.log(`updateResp: ${JSON.stringify(updateResp)} `);
 
-    return createResponse(200, "update memo successfully.");
+    return "update memo successfully.";
   } catch (err) {
     if (err instanceof Error) {
       throw new Error(
@@ -101,37 +62,6 @@ export const lambdaHandler = async (
   }
 };
 
-const isMemoType = (memo: Memo): memo is Memo => {
-  const { title, text, archived, favorite, done } = memo;
-  return (
-    archived !== undefined &&
-    done !== undefined &&
-    favorite !== undefined &&
-    title !== undefined &&
-    text !== undefined &&
-    typeof title === "string" &&
-    typeof text === "string" &&
-    typeof archived === "boolean" &&
-    typeof favorite === "boolean" &&
-    typeof done === "boolean"
-  );
-};
-
-const isValidMemo = (memo: Memo): boolean => {
+const isValidMemo = (memo: UpdateMemoInput): boolean => {
   return !(!memo.title || !memo.text);
-};
-
-const createResponse = (
-  statusCode: number,
-  message: string
-): APIGatewayProxyResult => {
-  return {
-    statusCode: statusCode,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "PUT",
-      "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    },
-    body: JSON.stringify({ message: message }),
-  };
 };

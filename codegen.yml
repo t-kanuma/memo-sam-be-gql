@@ -1,6 +1,6 @@
 overwrite: true
 schema: src/gql/schema.graphql
 generates:
-  ./src/gql/generated/sdk.ts:
+  ./src/gql/generated/appsync.d.ts:
     plugins:
       - typescript

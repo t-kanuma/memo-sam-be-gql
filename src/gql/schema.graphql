@@ -19,7 +19,7 @@ type Mutation {
 }
 
 type Query {
-  memos(isArchived: Boolean): [Memo!]!
+  memos(archived: Boolean): [Memo!]!
 }
 
 input CreateMemoInput {

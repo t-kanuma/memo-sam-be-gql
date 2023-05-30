@@ -58,7 +58,7 @@ export type Query = {
 
 
 export type QueryMemosArgs = {
-  isArchived?: InputMaybe<Scalars['Boolean']['input']>;
+  archived?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type UpdateMemoInput = {

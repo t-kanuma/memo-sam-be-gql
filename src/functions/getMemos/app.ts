@@ -5,46 +5,38 @@ import {
   QueryCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { AppSyncResolverHandler } from "aws-lambda";
+import { QueryMemosArgs, Memo } from "../../gql/generated/appsync";
+import { getUserId } from "../../commons";
 
 const docClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })
 );
 
-export const lambdaHandler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  const userId = event.requestContext.authorizer?.claims["cognito:username"];
-  if (!userId) {
-    throw new Error("No userName Found");
-  }
+// functionのgenericsは、<引数の型, 返り値の型>という形で書く
+export const lambdaHandler: AppSyncResolverHandler<
+  QueryMemosArgs,
+  Memo[]
+> = async (event) => {
+  const userId = getUserId(event);
 
   const params: QueryCommandInput = {
     TableName: process.env.TABLE_NAME,
     KeyConditionExpression: "userId = :userId",
     ExpressionAttributeValues: {
-      ":archived": false,
+      ":archived": event.arguments.archived,
       ":userId": userId,
     },
     FilterExpression: "archived = :archived",
   };
+
   try {
     const memos: QueryCommandOutput = await docClient.send(
       new QueryCommand(params)
     );
-    const response: APIGatewayProxyResult = {
-      statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET",
-        "Access-Control-Allow-Headers": "Content-Type,Authorization",
-      },
-      body: JSON.stringify({
-        memos: memos.Items,
-      }),
-    };
-    console.log(`memos: ${JSON.stringify(memos)}`);
-    return response;
+
+    // 開発側で自明のため、アサーションしている。
+    return memos.Items as Memo[];
   } catch (err) {
     if (err instanceof Error) {
       throw new Error(

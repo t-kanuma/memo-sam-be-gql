@@ -20,12 +20,12 @@ parallel = true
 [dev]
 # sam {全てのcommand} --config-env devで適用される 
 [dev.global.parameters]
-stack_name = "memo-backend-dev"
+stack_name = "memo-backend-gql-dev"
 
 # sam sync --config-env devで適用される。
 [dev.sync.parameters]
 # CFnと非同期でCloud環境と同期するStack名
-stack_name = "memo-backend-dev"	
+stack_name = "memo-backend-gql-dev"	
 # ローカルの変更をクラウドに自動同期する。
 watch = true
 
@@ -33,24 +33,24 @@ watch = true
 [dev.deploy.parameters]
 # S3バケットを自動的に作成する。
 resolve_s3 = true
-s3_prefix = "memo-backend-dev"
+s3_prefix = "memo-backend-gql-dev"
 region = "ap-northeast-1"
 # CFnに対しStackを正常に作ってもらえるようにIAMロールを付与する。
 capabilities = "CAPABILITY_IAM"
 # template.yamlに埋め込むパラメータ
-parameter_overrides = "EndpointConfigType=\"REGIONAL\" StageName=\"dev\""
+parameter_overrides = "StageName=\"dev\""
 
 # ------------------------------------------
 
 [staging]
 [staging.global.parameters]
-stack_name = "memo-backend-staging"
+stack_name = "memo-backend-gql-staging"
 
 [staging.deploy.parameters]
 resolve_s3 = true
-s3_prefix = "memo-backend-staging"
+s3_prefix = "memo-backend-gql-staging"
 region = "ap-northeast-1"
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "EndpointConfigType=\"REGIONAL\" StageName=\"staging\""
+parameter_overrides = "StageName=\"staging\""
 
 # ------------------------------------------

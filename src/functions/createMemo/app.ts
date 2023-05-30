@@ -6,17 +6,22 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { AppSyncResolverHandler } from "aws-lambda";
 import { v4 as uuidv4 } from "uuid";
-import { InitMemo, Memo } from "./types";
+import {
+  MutationCreateMemoArgs,
+  UpdateMemoInput,
+} from "../../gql/generated/appsync";
+import { getUserId } from "../../commons";
 
 const docClient: DynamoDBDocumentClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })
 );
 
-export const lambdaHandler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
+export const lambdaHandler: AppSyncResolverHandler<
+  MutationCreateMemoArgs,
+  string
+> = async (event) => {
   if (!event.body) {
     throw new Error("payload is null or empty.");
   }

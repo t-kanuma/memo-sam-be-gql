@@ -8,6 +8,7 @@
     "@aws-sdk/client-sqs": "^3.329.0",
     "@aws-sdk/lib-dynamodb": "^3.312.0",
     "esbuild": "^0.17.16",
+    "graphql": "^16.6.0",
     "uuid": "^9.0.0"
   },
   "scripts": {},

@@ -201,30 +201,6 @@ Resources:
         EntryPoints:
           - app.ts
 
-  GetArchivesFunc:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${AppName}-GetArchives-${StageName}
-      CodeUri: src/functions/getArchives/
-      Role: !GetAtt MemoTableAccessFuncRole.Arn
-      Events:
-        RestApi:
-          Type: Api
-          Properties:
-            RestApiId: !Ref Api
-            Path: /archives
-            Method: get
-            Auth:
-              Authorizer: CognitoAuthorizer
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: true
-        Target: "es2022"
-        Sourcemap: true
-        EntryPoints:
-          - app.ts
-
   CreateMemoFunc:
     Type: AWS::Serverless::Function
     Properties:
@@ -323,9 +299,6 @@ Outputs:
   GetMemosFunc:
     Description: "get memos lambda function ARN"
     Value: !GetAtt GetMemosFunc.Arn
-  GetArchiveFunc:
-    Description: "get archives lambda function ARN"
-    Value: !GetAtt GetArchivesFunc.Arn
   CreateMemoFunc:
     Description: "createa memo lambda function ARN"
     Value: !GetAtt CreateMemoFunc.Arn

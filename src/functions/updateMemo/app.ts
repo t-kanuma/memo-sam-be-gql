@@ -22,7 +22,9 @@ export const lambdaHandler: AppSyncResolverHandler<
 > = async (event) => {
   const userId = getUserId(event);
   const memoToUpdate = event.arguments.memo;
-  isValidMemo(memoToUpdate);
+  if (!isValidMemo(memoToUpdate)) {
+    throw new Error("memo is not valid.");
+  }
 
   const { id, title, text, archived, done, favorite } = memoToUpdate;
   const params: UpdateCommandInput = {

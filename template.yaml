@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 
-Description: MemoAppのバックエンド
+Description: MemoAppのバックエンド(AppSync版)
 
 Globals:
   Function:
@@ -11,59 +11,38 @@ Globals:
     Architectures:
       - x86_64
     MemorySize: 128
-    Layers:
-      - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:memo-app-common-lib-layer:11
     Environment:
       Variables:
         REGION: !Ref AWS::Region
         TABLE_NAME: !Sub ${AppName}-Memo-${StageName}
-        # TABLE_NAME: !FindInMap [TableNamePerStage, !Ref StageName, TableName]
-    # DeadLetterQueue: TODO
-
-# Mappings:
-#   TableNamePerStage:
-#     dev:
-#       TableName: MemoApp-Memo-dev
-#     staging:
-#       TableName: MemoApp-Memo-staging
-#     prod:
-#       TableName: MemoApp-Memo-prod
 
 Parameters:
-  EndpointConfigType:
-    Type: String
-    Default: REGIONAL
   StageName:
     Type: String
     Default: dev
     AllowedValues: [dev, staging, prod]
   AppName:
     Type: String
-    Default: MemoApp
+    Default: MemoApp-Gql
   NotifyNewMemoQueueName:
     Type: String
     Default: MemoApp-NotifyNewMemo-SourceQueue
-  # Foo:
-  #   Type: String
-  #   Default: Baz
 
 Resources:
   Api:
-    Type: AWS::Serverless::Api
+    Type: AWS::AppSync::GraphQLApi
     Properties:
-      Name: !Sub ${AppName}-Api-${StageName}
-      StageName: !Ref StageName
-      EndpointConfiguration:
-        Type: !Ref EndpointConfigType
-      Cors:
-        AllowMethods: "'*'"
-        AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: "'*'"
-      Auth:
-        Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn: !GetAtt UserPool.Arn
-      OpenApiVersion: "3.0.3"
+      Name: !Sub ${AppName}-Gql-Api-${StageName}
+      AuthenticationType: AMAZON_COGNITO_USER_POOLS
+      UserPoolConfig:
+        UserPoolId: !Ref UserPool
+        AwsRegion: !Ref AWS::Region
+        DefaultAction: ALLOW
+  GqlSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DefinitionS3Location: src/gql/schema.graphql
 
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -95,7 +74,7 @@ Resources:
   MemoTableAccessFuncPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: "memo-table-func-policy"
+      PolicyName: "memo-table-gql-func-policy"
       Roles:
         - !Ref MemoTableAccessFuncRole
         - !Ref CreateMemoFuncRole
@@ -122,18 +101,14 @@ Resources:
               - dynamodb:Update*
               - dynamodb:RestoreTable*
               - dynamodb:Delete*
-            # Resource: !GetAtt MemoTable.Arn
-            # あえてこういう書き方をしてみる
             Resource: !Sub
               - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}"
-              - TableName:
-                  !Sub ${AppName}-Memo-${StageName}
-                  # !FindInMap [TableNamePerStage, !Ref StageName, TableName]
+              - TableName: !Sub ${AppName}-Memo-${StageName}
 
   NotifyNewMemoPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: "notify-new-memo-policy"
+      PolicyName: "notify-new-gql-memo-policy"
       Roles:
         - !Ref CreateMemoFuncRole
       PolicyDocument:
@@ -145,6 +120,7 @@ Resources:
             Resource: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${NotifyNewMemoQueueName}-${StageName}"
 
   # Roles
+  ## createMemo以外のFunction
   MemoTableAccessFuncRole:
     Type: AWS::IAM::Role
     Properties:
@@ -158,7 +134,7 @@ Resources:
             Action:
               - sts:AssumeRole
 
-  # SQSにメッセージを送るためのロール
+  ## CreateMemoFunctionのRole
   CreateMemoFuncRole:
     Type: AWS::IAM::Role
     Properties:
@@ -172,26 +148,55 @@ Resources:
             Action:
               - sts:AssumeRole
 
+  ## DataSource共通のRole
+  LambdaInvokeDataSourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - appsync.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: "lambda-invoke-datasource-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*"
+
+  ## Query:memosについて
+  MemosResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt MemosDataSource.Name
+      TypeName: Query
+      FieldName: memos
+
+  MemosDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Description: Datasource for Memos Query
+      Name: !Sub ${AppName}-MemosDS
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt GetMemosFunc.Arn
+      ServiceRoleArn: !GetAtt LambdaInvokeDataSourceRole.Arn
+
   GetMemosFunc:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AppName}-GetMemos-${StageName}
       CodeUri: src/functions/getMemos/
       Role: !GetAtt MemoTableAccessFuncRole.Arn
-      Events:
-        # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
-        RestApi:
-          Type: Api
-          Properties:
-            RestApiId: !Ref Api
-            Path: /memos
-            Method: get
-            Auth:
-              Authorizer: CognitoAuthorizer
-            # Lambda環境変数
-            # Environment:
-            #   Variables:
-            #     QUZ: !Ref FOO
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -200,6 +205,26 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+
+  ## Mutation:createMemoについて
+  CreateMemoResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt CreateMemoDataSource.Name
+      TypeName: Mutation
+      FieldName: createMemo
+
+  CreateMemoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Description: Datasource for CreateMemo mutation
+      Name: !Sub ${AppName}-CreateMemo-DS
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt CreateMemoFunc.Arn
+      ServiceRoleArn: !GetAtt LambdaInvokeDataSourceRole.Arn
 
   CreateMemoFunc:
     Type: AWS::Serverless::Function
@@ -207,18 +232,9 @@ Resources:
       FunctionName: !Sub ${AppName}-CreateMemo-${StageName}
       CodeUri: src/functions/createMemo/
       Role: !GetAtt CreateMemoFuncRole.Arn
-      Events:
-        RestApi:
-          Type: Api
-          Properties:
-            RestApiId: !Ref Api
-            Path: /memos
-            Method: POST
-            Auth:
-              Authorizer: CognitoAuthorizer
       Environment:
         Variables:
-          QUEUE_URL: !Sub https://sqs.ap-northeast-1.amazonaws.com/${AWS::AccountId}/${NotifyNewMemoQueueName}-${StageName}
+          QUEUE_URL: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${NotifyNewMemoQueueName}-${StageName}
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -227,6 +243,26 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+
+  ## Mutation:updateMemoについて
+  UpdateMemoResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt UpdateMemoDataSource.Name
+      TypeName: Mutation
+      FieldName: updateMemo
+
+  UpdateMemoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Description: Datasource for UpdateMemo mutation
+      Name: !Sub ${AppName}-UpdateMemo-DS
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt UpdateMemoFunc.Arn
+      ServiceRoleArn: !GetAtt LambdaInvokeDataSourceRole.Arn
 
   UpdateMemoFunc:
     Type: AWS::Serverless::Function
@@ -234,15 +270,6 @@ Resources:
       FunctionName: !Sub ${AppName}-UpdateMemo-${StageName}
       CodeUri: src/functions/updateMemo/
       Role: !GetAtt MemoTableAccessFuncRole.Arn
-      Events:
-        RestApi:
-          Type: Api
-          Properties:
-            RestApiId: !Ref Api
-            Path: /memos/{id}
-            Method: PUT
-            Auth:
-              Authorizer: CognitoAuthorizer
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -252,21 +279,30 @@ Resources:
         EntryPoints:
           - app.ts
 
+  ## Mutation:deleteMemoについて
+  DeleteMemoResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt DeleteMemoDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteMemo
+  DeleteMemoDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Description: Datasource for DeleteMemo mutation
+      Name: !Sub ${AppName}-DeleteMemo-DS
+      Type: AWS_LAMBDA
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt DeleteArchiveFunc.Arn
+      ServiceRoleArn: !GetAtt LambdaInvokeDataSourceRole.Arn
   DeleteArchiveFunc:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${AppName}-DeleteArchive-${StageName}
       CodeUri: src/functions/deleteArchive/
       Role: !GetAtt MemoTableAccessFuncRole.Arn
-      Events:
-        RestApi:
-          Type: Api
-          Properties:
-            RestApiId: !Ref Api
-            Path: /archives/{id}
-            Method: DELETE
-            Auth:
-              Authorizer: CognitoAuthorizer
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -279,7 +315,6 @@ Resources:
   MemoTbl:
     Type: AWS::DynamoDB::Table
     Properties:
-      # TableName: !FindInMap [TableNamePerStage, !Ref StageName, Name]
       TableName: !Sub ${AppName}-Memo-${StageName}
       AttributeDefinitions:
         - AttributeName: userId
@@ -296,6 +331,9 @@ Resources:
         WriteCapacityUnits: 5
 
 Outputs:
+  MemoAppGraphQLEndpoint:
+    Description: "Memo App's AppSync Endpoint URL"
+    Value: !GetAtt Api.GraphQLUrl
   GetMemosFunc:
     Description: "get memos lambda function ARN"
     Value: !GetAtt GetMemosFunc.Arn

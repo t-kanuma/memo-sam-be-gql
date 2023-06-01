@@ -27,6 +27,7 @@ export type Memo = {
   id: Scalars['String']['output'];
   text: Scalars['String']['output'];
   title: Scalars['String']['output'];
+  userId: Scalars['String']['output'];
 };
 
 export type Mutation = {

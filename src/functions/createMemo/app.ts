@@ -8,10 +8,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { AppSyncResolverHandler } from "aws-lambda";
 import { v4 as uuidv4 } from "uuid";
-import {
-  MutationCreateMemoArgs,
-  UpdateMemoInput,
-} from "../../gql/generated/appsync";
+import { Memo, MutationCreateMemoArgs } from "../../gql/generated/appsync";
 import { getUserId } from "../../commons";
 
 const docClient: DynamoDBDocumentClient = DynamoDBDocumentClient.from(
@@ -22,28 +19,13 @@ export const lambdaHandler: AppSyncResolverHandler<
   MutationCreateMemoArgs,
   string
 > = async (event) => {
-  if (!event.body) {
-    throw new Error("payload is null or empty.");
-  }
-  const payload = JSON.parse(event.body) as InitMemo;
-  console.log(`payload: ${JSON.stringify(payload)}`);
-
-  if (!isInitMemoType(payload)) {
-    return createResponse(400, "payload is not InitMemo type.");
-  }
-
-  const { title, text } = payload;
+  const { title, text } = event.arguments.memo;
   if (!title || !text) {
-    return createResponse(400, "payload is not valid.");
-  }
-
-  const userId = event.requestContext.authorizer?.claims["cognito:username"];
-  if (!userId) {
-    throw new Error("No userName Found");
+    throw new Error("title or text is empty.");
   }
 
   const newMemo: Memo = {
-    userId: userId,
+    userId: getUserId(event),
     id: uuidv4(),
     archived: false,
     done: false,
@@ -92,30 +74,5 @@ export const lambdaHandler: AppSyncResolverHandler<
     }
   }
 
-  return createResponse(200, "created memo successfully.");
-};
-const isInitMemoType = (initMemo: InitMemo): initMemo is InitMemo => {
-  const { title, text } = initMemo;
-
-  return (
-    title !== undefined &&
-    text !== undefined &&
-    typeof title === "string" &&
-    typeof text === "string"
-  );
-};
-
-const createResponse = (
-  statusCode: number,
-  message: string
-): APIGatewayProxyResult => {
-  return {
-    statusCode: statusCode,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST",
-      "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    },
-    body: JSON.stringify({ message: message }),
-  };
+  return "created memo successfully.";
 };

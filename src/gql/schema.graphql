@@ -4,6 +4,7 @@
 }
 
 type Memo {
+  userId: String!
   archived: Boolean!
   done: Boolean!
   favorite: Boolean!

@@ -7,7 +7,7 @@ import {
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { AppSyncResolverHandler } from "aws-lambda";
 import { MutationDeleteMemoArgs } from "../../gql/generated/appsync";
-import { getUserId } from "../../commons";
+import { getUserId } from "./util";
 
 const docClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })

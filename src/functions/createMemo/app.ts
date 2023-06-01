@@ -8,8 +8,8 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { AppSyncResolverHandler } from "aws-lambda";
 import { v4 as uuidv4 } from "uuid";
+import { getUserId } from "./util";
 import { Memo, MutationCreateMemoArgs } from "../../gql/generated/appsync";
-import { getUserId } from "../../commons";
 
 const docClient: DynamoDBDocumentClient = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })

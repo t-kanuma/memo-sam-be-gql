@@ -243,6 +243,8 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+        External:
+          - "@/util"
 
   ## Mutation:updateMemoについて
   UpdateMemoResolver:

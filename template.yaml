@@ -23,7 +23,7 @@ Parameters:
     AllowedValues: [dev, staging, prod]
   AppName:
     Type: String
-    Default: MemoApp-Gql
+    Default: MemoAppGql
   NotifyNewMemoQueueName:
     Type: String
     Default: MemoApp-NotifyNewMemo-SourceQueue
@@ -185,7 +185,7 @@ Resources:
     Properties:
       ApiId: !GetAtt Api.ApiId
       Description: Datasource for Memos Query
-      Name: !Sub ${AppName}-MemosDS
+      Name: !Sub ${AppName}MemosDS${StageName}
       Type: AWS_LAMBDA
       LambdaConfig:
         LambdaFunctionArn: !GetAtt GetMemosFunc.Arn
@@ -220,7 +220,7 @@ Resources:
     Properties:
       ApiId: !GetAtt Api.ApiId
       Description: Datasource for CreateMemo mutation
-      Name: !Sub ${AppName}-CreateMemo-DS
+      Name: !Sub ${AppName}CreateMemoDS${StageName}
       Type: AWS_LAMBDA
       LambdaConfig:
         LambdaFunctionArn: !GetAtt CreateMemoFunc.Arn
@@ -258,7 +258,7 @@ Resources:
     Properties:
       ApiId: !GetAtt Api.ApiId
       Description: Datasource for UpdateMemo mutation
-      Name: !Sub ${AppName}-UpdateMemo-DS
+      Name: !Sub ${AppName}UpdateMemoDS${StageName}
       Type: AWS_LAMBDA
       LambdaConfig:
         LambdaFunctionArn: !GetAtt UpdateMemoFunc.Arn
@@ -292,7 +292,7 @@ Resources:
     Properties:
       ApiId: !GetAtt Api.ApiId
       Description: Datasource for DeleteMemo mutation
-      Name: !Sub ${AppName}-DeleteMemo-DS
+      Name: !Sub ${AppName}DeleteMemoDS${StageName}
       Type: AWS_LAMBDA
       LambdaConfig:
         LambdaFunctionArn: !GetAtt DeleteArchiveFunc.Arn

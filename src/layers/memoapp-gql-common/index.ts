@@ -1,6 +1,6 @@
 import { AppSyncIdentityCognito, AppSyncResolverEvent } from "aws-lambda";
 
-export const getUserId = <T, R>(event: AppSyncResolverEvent<T, R>) => {
+export const getUserId = <T, R>(event: AppSyncResolverEvent<T, R>): string => {
   // 開発側で自明のため、アサーションしている。
   const cognitoIdentity = event.identity as AppSyncIdentityCognito;
 

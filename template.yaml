@@ -11,6 +11,8 @@ Globals:
     Architectures:
       - x86_64
     MemorySize: 128
+    Layers:
+      - !Ref Layer
     Environment:
       Variables:
         REGION: !Ref AWS::Region
@@ -205,6 +207,8 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+        External:
+          - memoapp-gql-common
 
   ## Mutation:createMemoについて
   CreateMemoResolver:
@@ -243,6 +247,8 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+        External:
+          - memoapp-gql-common
 
   ## Mutation:updateMemoについて
   UpdateMemoResolver:
@@ -278,6 +284,8 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+        External:
+          - memoapp-gql-common
 
   ## Mutation:deleteMemoについて
   DeleteMemoResolver:
@@ -311,6 +319,19 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - app.ts
+        External:
+          - memoapp-gql-common
+
+  Layer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      CompatibleArchitectures:
+        - x86_64
+      CompatibleRuntimes:
+        - nodejs18.x
+      RetentionPolicy: Delete
+      ContentUri: src/layers
+      LayerName: !Sub ${AppName}-Layers
 
   MemoTbl:
     Type: AWS::DynamoDB::Table

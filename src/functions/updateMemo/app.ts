@@ -6,7 +6,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { AppSyncResolverHandler } from "aws-lambda";
-import { getUserId } from "./util";
+import { getUserId } from "memoapp-gql-common";
 import {
   MutationUpdateMemoArgs,
   UpdateMemoInput,

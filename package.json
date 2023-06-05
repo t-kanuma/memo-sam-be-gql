@@ -12,7 +12,8 @@
     "build-only": "sam build",
     "deploy-dev": "sam build && sam deploy --config-env dev",
     "deploy-staging": "sam build && sam deploy --config-env staging",
-    "generate": "graphql-codegen"
+    "generate": "graphql-codegen",
+    "build-layer": "./src/layers/build-layer.sh"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^4.0.0",

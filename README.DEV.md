@@ -9,6 +9,9 @@
 - `sam deploy --config-env dev`
 
 ## TODO
+- Layer
+  - 各Functionで使っているAWS SDKをLayer化する。
+  - build-layer.shを完成させる。
 - Cognito完成させる。
   - FE
     - サインアップ画面用意

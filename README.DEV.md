@@ -17,9 +17,11 @@ External:
 2. src/commonディレクトリを作る。
 3. index.ts, index.d.ts.を作る。
 4. /layers/nodejs/node_modules/memoapp-gql-commonディレクトリを作る。
-5. index.tsをbuildする。(`tsc src/common/index.ts`)
-  * index.jsを上記node_modulesに出力する。
+5. index.tsをbuildする。(`node_modules/typescript/bin/tsc src/common/index.ts --outDir layers/nodejs/node_modules/memoapp-gql-common`)
 6. src/memoapp-gql-common/index.d.tsを上記のnode_modulesにコピーする。
+7. src/commonにて`npm install --omit=dev`する。
+8. 出来上がったnode_modulesをlayers/nodejs/node_modules/memoapp-gql-commonにコピーする。
+9. src/commonにて`npm install`する。
 7. layers/nodejs/node_modules/memoapp-gql-commonを(ルートディレクトリの)/node_modulesにコピーする。
 8. samのbuild&deploy(`npm run deploy-dev`)をする。
 

@@ -330,7 +330,7 @@ Resources:
       CompatibleRuntimes:
         - nodejs18.x
       RetentionPolicy: Delete
-      ContentUri: src/layers
+      ContentUri: layers
       LayerName: !Sub ${AppName}-Layers
 
   MemoTbl:
